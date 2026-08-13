@@ -37,5 +37,22 @@ window.editReportUnit=async(reportId,unitId)=>{let r=reportById(reportId),e=r?.r
 window.deleteReportUnit=async(reportId,unitId)=>{let r=reportById(reportId);if((r?.report_units||[]).length<=1)return alert('This is the only unit on the report. Delete the whole report instead.');if(!confirm('Delete this unit from the report?'))return;let {error}=await sb.from('report_units').delete().eq('id',unitId).eq('company_id',profile.company_id);if(error)return alert(error.message);await recalcReport(reportId)};
 window.deleteReport=async id=>{let r=reportById(id);if(!r)return;if(!confirm(`Delete ${r.profiles?.full_name||'Foreman'} report for Job ${r.jobs?.job_number||''} on ${r.report_date}? This cannot be undone.`))return;let {error:ue}=await sb.from('report_units').delete().eq('report_id',id).eq('company_id',profile.company_id);if(ue)return alert(ue.message);let {error:re}=await sb.from('daily_reports').delete().eq('id',id).eq('company_id',profile.company_id);if(re)return alert(re.message);await loadGF()};
 $('refreshGF').onclick=loadGF;
-async function loadTeam(){let {data}=await sb.from('profiles').select('id,full_name,role').eq('company_id',profile.company_id).order('role');teamMembers=data||[];$('teamList').innerHTML=teamMembers.map(p=>`<div class="unitrow"><div><b>${esc(p.full_name)}</b><small>${p.role.toUpperCase()}</small></div></div>`).join('');if(company)$('companyInfo').innerHTML=`<p><b>${esc(company.name)}</b></p><p>Join code: <span class="pill">${esc(company.join_code)}</span></p><p class="muted">Give this code to your GF/Foreman users when they create their LineCrew account.</p>`}$('signOut').onclick=$('logoutTab').onclick=$('onboardSignOut').onclick=async()=>{await sb.auth.signOut();user=null;profile=null;company=null;entries=[];pickedUnit=null;pickedJob=null;$('who').textContent='Shared field test';show('auth')};document.querySelectorAll('.tabs button[data-page]').forEach(b=>b.onclick=async()=>{show(b.dataset.page);if(b.dataset.page==='gf')await loadGF();if(b.dataset.page==='jobs')await loadJobs();if(b.dataset.page==='admin')await loadTeam()});renderEntries();boot();
+let submittingReport=false;
+$('submitReport').addEventListener('click',function(e){
+  if(submittingReport){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    return;
+  }
+  submittingReport=true;
+  this.textContent='Submitting...';
+  setTimeout(()=>{this.disabled=true;},0);
+  setTimeout(()=>{
+    submittingReport=false;
+    this.disabled=false;
+    this.textContent='Submit Job Report';
+  },8000);
+},true);
+renderEntries();boot();  
+  async function loadTeam(){let {data}=await sb.from('profiles').select('id,full_name,role').eq('company_id',profile.company_id).order('role');teamMembers=data||[];$('teamList').innerHTML=teamMembers.map(p=>`<div class="unitrow"><div><b>${esc(p.full_name)}</b><small>${p.role.toUpperCase()}</small></div></div>`).join('');if(company)$('companyInfo').innerHTML=`<p><b>${esc(company.name)}</b></p><p>Join code: <span class="pill">${esc(company.join_code)}</span></p><p class="muted">Give this code to your GF/Foreman users when they create their LineCrew account.</p>`}$('signOut').onclick=$('logoutTab').onclick=$('onboardSignOut').onclick=async()=>{await sb.auth.signOut();user=null;profile=null;company=null;entries=[];pickedUnit=null;pickedJob=null;$('who').textContent='Shared field test';show('auth')};document.querySelectorAll('.tabs button[data-page]').forEach(b=>b.onclick=async()=>{show(b.dataset.page);if(b.dataset.page==='gf')await loadGF();if(b.dataset.page==='jobs')await loadJobs();if(b.dataset.page==='admin')await loadTeam()});renderEntries();boot();
 </script></body></html>
